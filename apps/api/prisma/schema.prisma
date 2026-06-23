@@ -1,0 +1,209 @@
+// Schema para el Sistema de Gestión de Inventario y Escandallos
+// Base de datos: PostgreSQL (local o Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------- Enumerados -----------------------------
+
+enum UnidadMedida {
+  KG
+  G
+  L
+  ML
+  UDS
+}
+
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+}
+
+enum MotivoSalida {
+  ELABORACION
+  MERMA
+  ROTURA
+  INVENTARIO
+  OTRO
+}
+
+enum RolUsuario {
+  ADMIN
+  GERENTE
+  COCINERO
+}
+
+// ----------------------------- Proveedores -----------------------------
+
+model Proveedor {
+  id        String   @id @default(uuid())
+  nombre    String
+  telefono  String?
+  email     String?
+  direccion String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entradas  Entrada[]
+  productos Producto[]
+}
+
+// ----------------------------- Productos -----------------------------
+
+model Producto {
+  id             String       @id @default(uuid())
+  nombre         String
+  categoria      String?
+  unidad         UnidadMedida
+  pesoUnitario   Decimal      @db.Decimal(10, 3) // gramos o ml por unidad
+  precioUnitario Decimal      @db.Decimal(10, 4) // por unidad de medida
+  stockMinimo    Decimal      @db.Decimal(12, 3) @default(0)
+  stockActual    Decimal      @db.Decimal(12, 3) @default(0)
+  fechaCaducidad DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  proveedorId String?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+
+  detalleEntrada   DetalleEntrada[]
+  detalleSalida    DetalleSalida[]
+  detalleEscandallo DetalleEscandallo[]
+  movimientos      Movimiento[]
+
+  @@index([categoria])
+  @@index([fechaCaducidad])
+}
+
+// ----------------------------- Entradas (Compras) -----------------------------
+
+model Entrada {
+  id           String   @id @default(uuid())
+  fecha        DateTime @default(now())
+  numeroFactura String?
+  proveedorId  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  proveedor Proveedor? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  detalles  DetalleEntrada[]
+
+  @@index([proveedorId])
+}
+
+model DetalleEntrada {
+  id          String  @id @default(uuid())
+  entradaId   String
+  productoId  String
+  cantidad    Decimal @db.Decimal(12, 3)
+  precioCompra Decimal @db.Decimal(10, 4) // por unidad
+  createdAt   DateTime @default(now())
+
+  entrada  Entrada @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+
+  @@index([entradaId])
+  @@index([productoId])
+}
+
+// ----------------------------- Salidas (Consumos) -----------------------------
+
+model Salida {
+  id        String       @id @default(uuid())
+  fecha     DateTime     @default(now())
+  motivo    MotivoSalida @default(ELABORACION)
+  motivoTexto String?
+  platoId   String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  plato   Plato?            @relation(fields: [platoId], references: [id], onDelete: SetNull)
+  detalles DetalleSalida[]
+
+  @@index([platoId])
+}
+
+model DetalleSalida {
+  id         String  @id @default(uuid())
+  salidaId   String
+  productoId String
+  cantidad   Decimal @db.Decimal(12, 3)
+  createdAt  DateTime @default(now())
+
+  salida   Salida   @relation(fields: [salidaId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+
+  @@index([salidaId])
+  @@index([productoId])
+}
+
+// ----------------------------- Platos / Escandallos -----------------------------
+
+model Plato {
+  id          String   @id @default(uuid())
+  nombre      String
+  descripcion String?
+  numRaciones Int      @default(1)
+  precioVenta Decimal  @db.Decimal(10, 2) @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  detalles DetalleEscandallo[]
+  salidas  Salida[]
+
+  @@index([nombre])
+}
+
+model DetalleEscandallo {
+  id             String  @id @default(uuid())
+  platoId        String
+  productoId     String
+  cantidad       Decimal  @db.Decimal(12, 3) // cantidad neta por ración
+  mermaPorcentaje Decimal @db.Decimal(5, 2) @default(0) // %
+  createdAt      DateTime @default(now())
+
+  plato    Plato    @relation(fields: [platoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@unique([platoId, productoId])
+  @@index([platoId])
+}
+
+// ----------------------------- Auditoría: Movimientos -----------------------------
+
+model Movimiento {
+  id             String          @id @default(uuid())
+  productoId     String
+  fecha          DateTime        @default(now())
+  tipo           TipoMovimiento
+  cantidad       Decimal         @db.Decimal(12, 3)
+  stockResultante Decimal        @db.Decimal(12, 3)
+  referencia     String? // entradaId / salidaId
+  motivo         MotivoSalida?
+  createdAt      DateTime        @default(now())
+
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@index([productoId, fecha])
+}
+
+// ----------------------------- Usuarios / Auth -----------------------------
+
+model Usuario {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  nombre       String
+  rol          RolUsuario  @default(COCINERO)
+  activo       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([email])
+}
