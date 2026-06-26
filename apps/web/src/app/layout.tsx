@@ -5,6 +5,10 @@ import ShellProvider from "@/components/ShellProvider";
 export const metadata: Metadata = {
   title: "Gestión Restaurante",
   description: "Inventario y escandallos para restaurantes",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
