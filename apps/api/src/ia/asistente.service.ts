@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RolUsuario } from '@prisma/client';
+import fetch from 'node-fetch';
 import { ToolExecutorService } from './ia.tool-executor';
 import { TOOLS } from './ia.tools';
 
@@ -64,7 +65,11 @@ export class AsistenteService {
         return { reply: 'No he recibido respuesta del modelo.' };
       }
 
-      messages.push(assistantMsg as OpenRouterMessage);
+      messages.push({
+        role: 'assistant',
+        content: assistantMsg.content ?? '',
+        ...(assistantMsg.tool_calls ? { tool_calls: assistantMsg.tool_calls } : {}),
+      });
 
       const toolCalls = assistantMsg.tool_calls;
       if (!toolCalls || toolCalls.length === 0) {
@@ -173,7 +178,7 @@ export class AsistenteService {
       throw new Error(`Error del servicio de IA (${res.status})`);
     }
 
-    return res.json();
+    return res.json() as Promise<any>;
   }
 
   private truncate(str: string, max: number): string {

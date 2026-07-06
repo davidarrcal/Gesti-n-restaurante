@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AsistenteService } from './asistente.service';
 import { ChatDto } from './dto/chat.dto';
@@ -11,11 +19,21 @@ export class AsistenteController {
   @Post('chat')
   async chat(@Body() dto: ChatDto, @Request() req: any) {
     const user = req.user;
-    return this.service.chat(
-      dto.message,
-      dto.history ?? [],
-      dto.contexto ?? '',
-      { id: user.id, nombre: user.email, rol: user.rol },
-    );
+    try {
+      return await this.service.chat(
+        dto.message,
+        dto.history ?? [],
+        dto.contexto ?? '',
+        { id: user.id, nombre: user.email, rol: user.rol },
+      );
+    } catch (err: any) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: err.message ?? 'Error en el asistente de IA',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
