@@ -5,7 +5,7 @@ import fetch from 'node-fetch';
 import { ToolExecutorService } from './ia.tool-executor';
 import { TOOLS } from './ia.tools';
 
-const MODEL = 'moonshotai/kimi-k2.6:free';
+const MODEL = 'moonshotai/kimi-k2.6';
 const MAX_TURNS = 6;
 
 interface OpenRouterMessage {
