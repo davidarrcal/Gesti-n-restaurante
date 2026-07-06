@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import Sidebar, { type NavItem } from "@/components/Sidebar";
 import UserMenu from "@/components/UserMenu";
+import ChatAssistant from "@/components/ChatAssistant";
 import type { RolUsuario } from "@/lib/auth-types";
 
 const NAV: NavItem[] = [
@@ -56,6 +57,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <ChatAssistant />
     </div>
   );
 }

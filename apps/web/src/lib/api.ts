@@ -165,4 +165,15 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => http<AuthUser>("/auth/me"),
+
+  // ----- Asistente IA -----
+  chat: (
+    message: string,
+    history: { role: "user" | "assistant"; content: string }[],
+    contexto?: string,
+  ) =>
+    http<{ reply: string }>("/ia/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, history, contexto }),
+    }),
 };

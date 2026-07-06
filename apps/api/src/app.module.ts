@@ -10,6 +10,7 @@ import { EscandallosModule } from './escandallos/escandallos.module';
 import { AlertasModule } from './alertas/alertas.module';
 import { InformesModule } from './informes/informes.module';
 import { AuthModule } from './auth/auth.module';
+import { AsistenteModule } from './ia/asistente.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AuthModule } from './auth/auth.module';
     AlertasModule,
     InformesModule,
     AuthModule,
+    AsistenteModule,
   ],
 })
 export class AppModule {}
