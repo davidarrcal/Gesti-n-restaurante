@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "prisma generate && prisma db push --accept-data-loss && nest build",
+    "build": "prisma generate && node prisma/reset.js && prisma db push && node prisma/seed.js && nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
