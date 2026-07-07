@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RolUsuario } from '@prisma/client';
-import fetch from 'node-fetch';
 import { ToolExecutorService } from './ia.tool-executor';
 import { TOOLS } from './ia.tools';
 
@@ -178,7 +177,7 @@ export class AsistenteService {
       throw new Error(`Error del servicio de IA (${res.status})`);
     }
 
-    return res.json() as Promise<any>;
+    return res.json();
   }
 
   private truncate(str: string, max: number): string {
