@@ -23,24 +23,18 @@ export class ToolExecutorService {
   async execute(
     name: string,
     args: Record<string, any>,
-    user: { id: string; rol: RolUsuario },
+    user: { id: string; rol: RolUsuario; restauranteId: string },
   ): Promise<any> {
+    const rid = user.restauranteId;
     switch (name) {
       case 'listar_productos':
-        return this.productos.findAll({
-          q: args.q,
-          categoria: args.categoria,
-        });
+        return this.productos.findAll({ q: args.q, categoria: args.categoria }, rid);
 
       case 'obtener_producto':
-        return this.productos.findOne(args.id);
+        return this.productos.findOne(args.id, rid);
 
       case 'crear_producto':
-        this.requireRole(user.rol, [
-          RolUsuario.COCINERO,
-          RolUsuario.GERENTE,
-          RolUsuario.ADMIN,
-        ]);
+        this.requireRole(user.rol, [RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN]);
         return this.productos.create({
           nombre: args.nombre,
           categoria: args.categoria,
@@ -50,14 +44,10 @@ export class ToolExecutorService {
           stockMinimo: args.stockMinimo,
           fechaCaducidad: args.fechaCaducidad,
           proveedorId: args.proveedorId,
-        });
+        }, rid);
 
       case 'actualizar_producto':
-        this.requireRole(user.rol, [
-          RolUsuario.COCINERO,
-          RolUsuario.GERENTE,
-          RolUsuario.ADMIN,
-        ]);
+        this.requireRole(user.rol, [RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN]);
         return this.productos.update(args.id, {
           nombre: args.nombre,
           categoria: args.categoria,
@@ -65,87 +55,63 @@ export class ToolExecutorService {
           stockMinimo: args.stockMinimo,
           fechaCaducidad: args.fechaCaducidad,
           proveedorId: args.proveedorId,
-        });
+        }, rid);
 
       case 'listar_proveedores':
-        return this.proveedores.findAll(args.q);
+        return this.proveedores.findAll(args.q, rid);
 
       case 'registrar_entrada':
-        this.requireRole(user.rol, [
-          RolUsuario.COCINERO,
-          RolUsuario.GERENTE,
-          RolUsuario.ADMIN,
-        ]);
+        this.requireRole(user.rol, [RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN]);
         return this.entradas.create({
           proveedorId: args.proveedorId,
           numeroFactura: args.numeroFactura,
           lineas: args.lineas,
-        });
+        }, rid);
 
       case 'registrar_salida':
-        this.requireRole(user.rol, [
-          RolUsuario.COCINERO,
-          RolUsuario.GERENTE,
-          RolUsuario.ADMIN,
-        ]);
+        this.requireRole(user.rol, [RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN]);
         return this.salidas.create({
           motivo: args.motivo,
           motivoTexto: args.motivoTexto,
           platoId: args.platoId,
           lineas: args.lineas,
-        });
+        }, rid);
 
       case 'listar_entradas':
-        return this.entradas.findAll({
-          desde: args.desde,
-          hasta: args.hasta,
-          proveedorId: args.proveedorId,
-        });
+        return this.entradas.findAll({ desde: args.desde, hasta: args.hasta, proveedorId: args.proveedorId }, rid);
 
       case 'listar_salidas':
-        return this.salidas.findAll({
-          desde: args.desde,
-          hasta: args.hasta,
-          platoId: args.platoId,
-        });
+        return this.salidas.findAll({ desde: args.desde, hasta: args.hasta, platoId: args.platoId }, rid);
 
       case 'listar_platos':
-        return this.escandallos.findAll();
+        return this.escandallos.findAll(rid);
 
       case 'obtener_plato':
-        return this.escandallos.findOne(args.id);
+        return this.escandallos.findOne(args.id, rid);
 
       case 'crear_plato':
-        this.requireRole(user.rol, [
-          RolUsuario.COCINERO,
-          RolUsuario.GERENTE,
-          RolUsuario.ADMIN,
-        ]);
+        this.requireRole(user.rol, [RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN]);
         return this.escandallos.create({
           nombre: args.nombre,
           descripcion: args.descripcion,
           numRaciones: args.numRaciones,
           precioVenta: args.precioVenta,
           lineas: args.lineas,
-        });
+        }, rid);
 
       case 'obtener_alertas':
-        return this.alertas.findAll(args.diasProximo ?? 7);
+        return this.alertas.findAll(rid, args.diasProximo ?? 7);
 
       case 'obtener_metricas':
-        return this.alertas.metricas();
+        return this.alertas.metricas(rid);
 
       case 'generar_informe':
         this.requireRole(user.rol, [RolUsuario.GERENTE, RolUsuario.ADMIN]);
         if (args.tipo === 'movimientos') {
-          return this.informes.movimientos(
-            args.productoId,
-            args.desde,
-            args.hasta,
-          );
+          return this.informes.movimientos(args.productoId, rid, args.desde, args.hasta);
         }
-        if (args.tipo === 'escandallos') return this.informes.escandallos();
-        return this.informes.caducidades(args.desde, args.hasta);
+        if (args.tipo === 'escandallos') return this.informes.escandallos(rid);
+        return this.informes.caducidades(rid, args.desde, args.hasta);
 
       default:
         return { error: `Herramienta desconocida: ${name}` };

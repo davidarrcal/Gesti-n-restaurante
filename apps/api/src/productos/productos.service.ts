@@ -9,7 +9,7 @@ import { FiltroProductoDto, FiltroCaducidad } from './dto/filtro-producto.dto';
 export class ProductosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateProductoDto) {
+  create(dto: CreateProductoDto, restauranteId: string) {
     const data: Prisma.ProductoCreateInput = {
       nombre: dto.nombre,
       categoria: dto.categoria,
@@ -22,17 +22,18 @@ export class ProductosService {
       proveedor: dto.proveedorId
         ? { connect: { id: dto.proveedorId } }
         : undefined,
+      restaurante: { connect: { id: restauranteId } },
     };
     return this.prisma.producto.create({ data, include: { proveedor: true } });
   }
 
-  async findAll(f: FiltroProductoDto = {}) {
+  async findAll(f: FiltroProductoDto = {}, restauranteId: string) {
     const diasProximo = 7;
     const ahora = new Date();
     const limite = new Date();
     limite.setDate(limite.getDate() + diasProximo);
 
-    const where: Prisma.ProductoWhereInput = {};
+    const where: Prisma.ProductoWhereInput = { restauranteId };
 
     if (f.q) {
       where.OR = [
@@ -70,18 +71,27 @@ export class ProductosService {
     }));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, restauranteId: string) {
     const prod = await this.prisma.producto.findUnique({
       where: { id },
       include: { proveedor: true },
     });
-    if (!prod) throw new NotFoundException(`Producto ${id} no encontrado`);
+    if (!prod || prod.restauranteId !== restauranteId)
+      throw new NotFoundException(`Producto ${id} no encontrado`);
     return prod;
   }
 
-  async historial(id: string, desde?: string, hasta?: string) {
-    await this.findOne(id);
-    const where: Prisma.MovimientoWhereInput = { productoId: id };
+  async historial(
+    id: string,
+    restauranteId: string,
+    desde?: string,
+    hasta?: string,
+  ) {
+    await this.findOne(id, restauranteId);
+    const where: Prisma.MovimientoWhereInput = {
+      productoId: id,
+      restauranteId,
+    };
     if (desde || hasta) {
       where.fecha = {};
       if (desde) where.fecha.gte = new Date(desde);
@@ -94,7 +104,7 @@ export class ProductosService {
     });
   }
 
-  update(id: string, dto: UpdateProductoDto) {
+  update(id: string, dto: UpdateProductoDto, restauranteId: string) {
     const data: Prisma.ProductoUpdateInput = {
       nombre: dto.nombre,
       categoria: dto.categoria,
@@ -114,8 +124,8 @@ export class ProductosService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, restauranteId: string) {
+    await this.findOne(id, restauranteId);
     return this.prisma.producto.delete({ where: { id } });
   }
 }

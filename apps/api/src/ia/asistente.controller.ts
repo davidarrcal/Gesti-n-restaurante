@@ -24,7 +24,7 @@ export class AsistenteController {
         dto.message,
         dto.history ?? [],
         dto.contexto ?? '',
-        { id: user.id, nombre: user.email, rol: user.rol },
+        { id: user.id, nombre: user.email, rol: user.rol, restauranteId: user.restauranteId },
       );
     } catch (err: any) {
       throw new HttpException(

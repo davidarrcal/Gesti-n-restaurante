@@ -164,6 +164,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  register: (data: {
+    email: string;
+    password: string;
+    nombre: string;
+    restauranteNombre?: string;
+  }) =>
+    http<AuthResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   me: () => http<AuthUser>("/auth/me"),
 
   // ----- Asistente IA -----

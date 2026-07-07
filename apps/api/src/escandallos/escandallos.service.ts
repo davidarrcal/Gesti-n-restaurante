@@ -43,12 +43,11 @@ export class EscandallosService {
     return { ...plato, lineas: detalles, calc };
   }
 
-  async create(dto: CreatePlatoDto) {
-    // Validar productos existen
+  async create(dto: CreatePlatoDto, restauranteId: string) {
     const ids = dto.lineas.map((l) => l.productoId);
     if (ids.length > 0) {
       const count = await this.prisma.producto.count({
-        where: { id: { in: ids } },
+        where: { id: { in: ids }, restauranteId },
       });
       if (count !== ids.length) {
         throw new BadRequestException('Uno o más productos no existen');
@@ -62,6 +61,7 @@ export class EscandallosService {
           descripcion: dto.descripcion,
           numRaciones: dto.numRaciones,
           precioVenta: dto.precioVenta,
+          restaurante: { connect: { id: restauranteId } },
         },
       });
       if (dto.lineas.length > 0) {
@@ -80,8 +80,9 @@ export class EscandallosService {
     return this.enriquecer(plato);
   }
 
-  async findAll() {
+  async findAll(restauranteId: string) {
     const platos = await this.prisma.plato.findMany({
+      where: { restauranteId },
       orderBy: { nombre: 'asc' },
     });
     const enriquecidos = await Promise.all(platos.map((p) => this.enriquecer(p)));
@@ -99,14 +100,15 @@ export class EscandallosService {
     }));
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, restauranteId: string) {
     const plato = await this.prisma.plato.findUnique({ where: { id } });
-    if (!plato) throw new NotFoundException(`Plato ${id} no encontrado`);
+    if (!plato || plato.restauranteId !== restauranteId)
+      throw new NotFoundException(`Plato ${id} no encontrado`);
     return this.enriquecer(plato);
   }
 
-  async update(id: string, dto: UpdatePlatoDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdatePlatoDto, restauranteId: string) {
+    await this.findOne(id, restauranteId);
     const data: Prisma.PlatoUpdateInput = {
       nombre: dto.nombre,
       descripcion: dto.descripcion,
@@ -123,12 +125,13 @@ export class EscandallosService {
   async updateLineas(
     id: string,
     lineas: { productoId: string; cantidad: number; mermaPorcentaje?: number }[],
+    restauranteId: string,
   ) {
-    await this.findOne(id);
+    await this.findOne(id, restauranteId);
     const ids = lineas.map((l) => l.productoId);
     if (ids.length > 0) {
       const count = await this.prisma.producto.count({
-        where: { id: { in: ids } },
+        where: { id: { in: ids }, restauranteId },
       });
       if (count !== ids.length) {
         throw new BadRequestException('Uno o más productos no existen');
@@ -147,11 +150,11 @@ export class EscandallosService {
         });
       }
     });
-    return this.findOne(id);
+    return this.findOne(id, restauranteId);
   }
 
-  async duplicate(id: string) {
-    const original = await this.findOne(id);
+  async duplicate(id: string, restauranteId: string) {
+    const original = await this.findOne(id, restauranteId);
     return this.prisma.$transaction(async (tx) => {
       const copia = await tx.plato.create({
         data: {
@@ -159,6 +162,7 @@ export class EscandallosService {
           descripcion: original.descripcion,
           numRaciones: original.numRaciones,
           precioVenta: original.precioVenta,
+          restaurante: { connect: { id: restauranteId } },
         },
       });
       if ((original as any).lineas?.length > 0) {
@@ -175,8 +179,8 @@ export class EscandallosService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, restauranteId: string) {
+    await this.findOne(id, restauranteId);
     return this.prisma.plato.delete({ where: { id } });
   }
 }

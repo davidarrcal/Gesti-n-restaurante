@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
@@ -24,24 +25,28 @@ export class EscandallosController {
 
   @Post()
   @Roles(RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN)
-  create(@Body() dto: CreatePlatoDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreatePlatoDto, @Request() req: any) {
+    return this.service.create(dto, req.user.restauranteId);
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Request() req: any) {
+    return this.service.findAll(req.user.restauranteId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.service.findOne(id, req.user.restauranteId);
   }
 
   @Patch(':id')
   @Roles(RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdatePlatoDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdatePlatoDto,
+    @Request() req: any,
+  ) {
+    return this.service.update(id, dto, req.user.restauranteId);
   }
 
   @Patch(':id/lineas')
@@ -49,19 +54,20 @@ export class EscandallosController {
   updateLineas(
     @Param('id') id: string,
     @Body() body: { lineas: LineaEscandalloDto[] },
+    @Request() req: any,
   ) {
-    return this.service.updateLineas(id, body.lineas ?? []);
+    return this.service.updateLineas(id, body.lineas ?? [], req.user.restauranteId);
   }
 
   @Post(':id/duplicar')
   @Roles(RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN)
-  duplicate(@Param('id') id: string) {
-    return this.service.duplicate(id);
+  duplicate(@Param('id') id: string, @Request() req: any) {
+    return this.service.duplicate(id, req.user.restauranteId);
   }
 
   @Delete(':id')
   @Roles(RolUsuario.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.service.remove(id, req.user.restauranteId);
   }
 }

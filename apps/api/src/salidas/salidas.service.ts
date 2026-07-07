@@ -11,10 +11,10 @@ import { CreateSalidaDto } from './dto/create-salida.dto';
 export class SalidasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateSalidaDto) {
+  async create(dto: CreateSalidaDto, restauranteId: string) {
     const productoIds = dto.lineas.map((l) => l.productoId);
     const productos = await this.prisma.producto.findMany({
-      where: { id: { in: productoIds } },
+      where: { id: { in: productoIds }, restauranteId },
       select: { id: true, stockActual: true, nombre: true },
     });
     const mapa = new Map(productos.map((p) => [p.id, p]));
@@ -33,8 +33,8 @@ export class SalidasService {
     }
 
     if (dto.platoId) {
-      const plato = await this.prisma.plato.findUnique({
-        where: { id: dto.platoId },
+      const plato = await this.prisma.plato.findFirst({
+        where: { id: dto.platoId, restauranteId },
       });
       if (!plato) throw new BadRequestException('Plato no encontrado');
     }
@@ -47,9 +47,8 @@ export class SalidasService {
           fecha,
           motivo: dto.motivo ?? 'ELABORACION',
           motivoTexto: dto.motivoTexto,
-          plato: dto.platoId
-            ? { connect: { id: dto.platoId } }
-            : undefined,
+          platoId: dto.platoId ?? undefined,
+          restauranteId,
         },
       });
 
@@ -80,6 +79,7 @@ export class SalidasService {
             stockResultante: nuevoStock,
             referencia: salida.id,
             motivo: dto.motivo ?? 'ELABORACION',
+            restauranteId,
           },
         });
       }
@@ -94,12 +94,11 @@ export class SalidasService {
     });
   }
 
-  async findAll(f?: {
-    desde?: string;
-    hasta?: string;
-    platoId?: string;
-  }) {
-    const where: Prisma.SalidaWhereInput = {};
+  async findAll(
+    f: { desde?: string; hasta?: string; platoId?: string },
+    restauranteId: string,
+  ) {
+    const where: Prisma.SalidaWhereInput = { restauranteId };
     if (f?.platoId) where.platoId = f.platoId;
     if (f?.desde || f?.hasta) {
       where.fecha = {};
@@ -117,7 +116,7 @@ export class SalidasService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, restauranteId: string) {
     const salida = await this.prisma.salida.findUnique({
       where: { id },
       include: {
@@ -125,12 +124,13 @@ export class SalidasService {
         detalles: { include: { producto: true } },
       },
     });
-    if (!salida) throw new NotFoundException(`Salida ${id} no encontrada`);
+    if (!salida || salida.restauranteId !== restauranteId)
+      throw new NotFoundException(`Salida ${id} no encontrada`);
     return salida;
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, restauranteId: string) {
+    await this.findOne(id, restauranteId);
     return this.prisma.$transaction(async (tx) => {
       const detalles = await tx.detalleSalida.findMany({
         where: { salidaId: id },

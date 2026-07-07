@@ -11,11 +11,10 @@ import { CreateEntradaDto } from './dto/create-entrada.dto';
 export class EntradasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateEntradaDto) {
-    // Validar que los productos existen y recopilar info
+  async create(dto: CreateEntradaDto, restauranteId: string) {
     const productoIds = dto.lineas.map((l) => l.productoId);
     const productos = await this.prisma.producto.findMany({
-      where: { id: { in: productoIds } },
+      where: { id: { in: productoIds }, restauranteId },
       select: { id: true, stockActual: true, nombre: true },
     });
     const mapa = new Map(productos.map((p) => [p.id, p]));
@@ -34,9 +33,8 @@ export class EntradasService {
         data: {
           fecha,
           numeroFactura: dto.numeroFactura,
-          proveedor: dto.proveedorId
-            ? { connect: { id: dto.proveedorId } }
-            : undefined,
+          proveedorId: dto.proveedorId ?? undefined,
+          restauranteId,
         },
       });
 
@@ -58,7 +56,6 @@ export class EntradasService {
           where: { id: linea.productoId },
           data: {
             stockActual: nuevoStock,
-            // Actualiza el precio de referencia del producto
             precioUnitario: Number(linea.precioCompra),
           },
         });
@@ -71,6 +68,7 @@ export class EntradasService {
             cantidad: Number(linea.cantidad),
             stockResultante: nuevoStock,
             referencia: entrada.id,
+            restauranteId,
           },
         });
       }
@@ -85,8 +83,11 @@ export class EntradasService {
     });
   }
 
-  async findAll(f?: { desde?: string; hasta?: string; proveedorId?: string }) {
-    const where: Prisma.EntradaWhereInput = {};
+  async findAll(
+    f: { desde?: string; hasta?: string; proveedorId?: string },
+    restauranteId: string,
+  ) {
+    const where: Prisma.EntradaWhereInput = { restauranteId };
     if (f?.proveedorId) where.proveedorId = f.proveedorId;
     if (f?.desde || f?.hasta) {
       where.fecha = {};
@@ -104,7 +105,7 @@ export class EntradasService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, restauranteId: string) {
     const entrada = await this.prisma.entrada.findUnique({
       where: { id },
       include: {
@@ -112,13 +113,13 @@ export class EntradasService {
         detalles: { include: { producto: true } },
       },
     });
-    if (!entrada) throw new NotFoundException(`Entrada ${id} no encontrada`);
+    if (!entrada || entrada.restauranteId !== restauranteId)
+      throw new NotFoundException(`Entrada ${id} no encontrada`);
     return entrada;
   }
 
-  async remove(id: string) {
-    // Revertir stock y eliminar movimientos asociados
-    await this.findOne(id);
+  async remove(id: string, restauranteId: string) {
+    await this.findOne(id, restauranteId);
     return this.prisma.$transaction(async (tx) => {
       const detalles = await tx.detalleEntrada.findMany({
         where: { entradaId: id },

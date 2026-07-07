@@ -7,6 +7,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
@@ -22,27 +23,28 @@ export class SalidasController {
 
   @Post()
   @Roles(RolUsuario.COCINERO, RolUsuario.GERENTE, RolUsuario.ADMIN)
-  create(@Body() dto: CreateSalidaDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateSalidaDto, @Request() req: any) {
+    return this.service.create(dto, req.user.restauranteId);
   }
 
   @Get()
   findAll(
+    @Request() req: any,
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
     @Query('platoId') platoId?: string,
   ) {
-    return this.service.findAll({ desde, hasta, platoId });
+    return this.service.findAll({ desde, hasta, platoId }, req.user.restauranteId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.service.findOne(id, req.user.restauranteId);
   }
 
   @Delete(':id')
   @Roles(RolUsuario.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.service.remove(id, req.user.restauranteId);
   }
 }

@@ -7,8 +7,13 @@ export type TipoInforme = 'movimientos' | 'escandallos' | 'caducidades';
 export class InformesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async movimientos(productoId: string, desde?: string, hasta?: string) {
-    const where: any = { productoId };
+  async movimientos(
+    productoId: string,
+    restauranteId: string,
+    desde?: string,
+    hasta?: string,
+  ) {
+    const where: any = { productoId, restauranteId };
     if (desde || hasta) {
       where.fecha = {};
       if (desde) where.fecha.gte = new Date(desde);
@@ -20,8 +25,8 @@ export class InformesService {
         orderBy: { fecha: 'desc' },
         take: 1000,
       }),
-      this.prisma.producto.findUnique({
-        where: { id: productoId },
+      this.prisma.producto.findFirst({
+        where: { id: productoId, restauranteId },
         select: { nombre: true, unidad: true, precioUnitario: true },
       }),
     ]);
@@ -62,8 +67,9 @@ export class InformesService {
     };
   }
 
-  async escandallos() {
+  async escandallos(restauranteId: string) {
     const platos = await this.prisma.plato.findMany({
+      where: { restauranteId },
       include: {
         detalles: {
           include: {
@@ -128,8 +134,8 @@ export class InformesService {
     };
   }
 
-  async caducidades(desde?: string, hasta?: string) {
-    const where: any = { fechaCaducidad: { not: null } };
+  async caducidades(restauranteId: string, desde?: string, hasta?: string) {
+    const where: any = { restauranteId, fechaCaducidad: { not: null } };
     if (desde || hasta) {
       where.fechaCaducidad = {};
       if (desde) where.fechaCaducidad.gte = new Date(desde);

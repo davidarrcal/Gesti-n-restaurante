@@ -14,42 +14,47 @@ const DAY = 86400000;
   await p.plato.deleteMany();
   await p.proveedor.deleteMany();
   await p.usuario.deleteMany();
+  await p.restaurante.deleteMany();
 
-  // Usuario admin por defecto
+  // Restaurante de ejemplo
+  const restaurante = await p.restaurante.create({ data: { nombre: 'Restaurante Demo' } });
+  const rid = restaurante.id;
+
+  // Usuarios
   const hash = await bcrypt.hash('admin123', 10);
-  const admin = await p.usuario.create({
-    data: { email: 'admin@restaurante.es', passwordHash: hash, nombre: 'Administrador', rol: 'ADMIN' },
+  await p.usuario.create({
+    data: { email: 'admin@restaurante.es', passwordHash: hash, nombre: 'Administrador', rol: 'ADMIN', restauranteId: rid },
   });
   const hash2 = await bcrypt.hash('cocina123', 10);
-  const cocinero = await p.usuario.create({
-    data: { email: 'cocina@restaurante.es', passwordHash: hash2, nombre: 'Jefe de Cocina', rol: 'COCINERO' },
+  await p.usuario.create({
+    data: { email: 'cocina@restaurante.es', passwordHash: hash2, nombre: 'Jefe de Cocina', rol: 'COCINERO', restauranteId: rid },
   });
 
   const prov = await p.proveedor.create({
-    data: { nombre: 'Cárnicas García', telefono: '911234567', email: 'ventas@carnicasgarcia.es' },
+    data: { nombre: 'Cárnicas García', telefono: '911234567', email: 'ventas@carnicasgarcia.es', restauranteId: rid },
   });
-  const prov2 = await p.proveedor.create({ data: { nombre: 'Frutas y Verduras López', telefono: '912345678' } });
-  await p.proveedor.create({ data: { nombre: 'Distribuciones Chef S.A.' } });
+  const prov2 = await p.proveedor.create({ data: { nombre: 'Frutas y Verduras López', telefono: '912345678', restauranteId: rid } });
+  await p.proveedor.create({ data: { nombre: 'Distribuciones Chef S.A.', restauranteId: rid } });
 
   const lomo = await p.producto.create({
-    data: { nombre: 'Lomo de cerdo', categoria: 'Carnes', unidad: 'KG', pesoUnitario: 1000, precioUnitario: 12, stockMinimo: 2, stockActual: 7.5, fechaCaducidad: new Date(Date.now() + 5 * DAY), proveedorId: prov.id },
+    data: { nombre: 'Lomo de cerdo', categoria: 'Carnes', unidad: 'KG', pesoUnitario: 1000, precioUnitario: 12, stockMinimo: 2, stockActual: 7.5, fechaCaducidad: new Date(Date.now() + 5 * DAY), proveedorId: prov.id, restauranteId: rid },
   });
   const solomillo = await p.producto.create({
-    data: { nombre: 'Solomillo', categoria: 'Carnes', unidad: 'KG', pesoUnitario: 1000, precioUnitario: 18, stockMinimo: 3, stockActual: 1.2, proveedorId: prov.id },
+    data: { nombre: 'Solomillo', categoria: 'Carnes', unidad: 'KG', pesoUnitario: 1000, precioUnitario: 18, stockMinimo: 3, stockActual: 1.2, proveedorId: prov.id, restauranteId: rid },
   });
   const patata = await p.producto.create({
-    data: { nombre: 'Patata', categoria: 'Verduras', unidad: 'KG', pesoUnitario: 1000, precioUnitario: 1.5, stockMinimo: 5, stockActual: 20, fechaCaducidad: new Date(Date.now() + 30 * DAY), proveedorId: prov2.id },
+    data: { nombre: 'Patata', categoria: 'Verduras', unidad: 'KG', pesoUnitario: 1000, precioUnitario: 1.5, stockMinimo: 5, stockActual: 20, fechaCaducidad: new Date(Date.now() + 30 * DAY), proveedorId: prov2.id, restauranteId: rid },
   });
   const aceite = await p.producto.create({
-    data: { nombre: 'Aceite de oliva', categoria: 'Despensa', unidad: 'L', pesoUnitario: 1000, precioUnitario: 4, stockMinimo: 4, stockActual: 2 },
+    data: { nombre: 'Aceite de oliva', categoria: 'Despensa', unidad: 'L', pesoUnitario: 1000, precioUnitario: 4, stockMinimo: 4, stockActual: 2, restauranteId: rid },
   });
   await p.producto.create({
-    data: { nombre: 'Leche entera', categoria: 'Lácteos', unidad: 'L', pesoUnitario: 1000, precioUnitario: 0.9, stockMinimo: 3, stockActual: 8, fechaCaducidad: new Date(Date.now() - 1 * DAY), proveedorId: prov.id },
+    data: { nombre: 'Leche entera', categoria: 'Lácteos', unidad: 'L', pesoUnitario: 1000, precioUnitario: 0.9, stockMinimo: 3, stockActual: 8, fechaCaducidad: new Date(Date.now() - 1 * DAY), proveedorId: prov.id, restauranteId: rid },
   });
 
-  // Escandallo de ejemplo: Solomillo con guarnición (2 raciones, 24 €)
+  // Escandallo de ejemplo
   const plato = await p.plato.create({
-    data: { nombre: 'Solomillo con guarnición', numRaciones: 2, precioVenta: 24 },
+    data: { nombre: 'Solomillo con guarnición', numRaciones: 2, precioVenta: 24, restauranteId: rid },
   });
   await p.detalleEscandallo.createMany({
     data: [
@@ -60,10 +65,11 @@ const DAY = 86400000;
   });
 
   // Entrada de ejemplo
-  const entrada = await p.entrada.create({ data: { fecha: new Date(), numeroFactura: 'F-2026-001', proveedorId: prov.id } });
+  const entrada = await p.entrada.create({ data: { fecha: new Date(), numeroFactura: 'F-2026-001', proveedorId: prov.id, restauranteId: rid } });
   await p.detalleEntrada.create({ data: { entradaId: entrada.id, productoId: lomo.id, cantidad: 10, precioCompra: 12 } });
-  await p.movimiento.create({ data: { productoId: lomo.id, fecha: new Date(), tipo: 'ENTRADA', cantidad: 10, stockResultante: 10, referencia: entrada.id } });
+  await p.movimiento.create({ data: { productoId: lomo.id, fecha: new Date(), tipo: 'ENTRADA', cantidad: 10, stockResultante: 10, referencia: entrada.id, restauranteId: rid } });
 
-  console.log((await p.producto.count()) + ' productos, ' + (await p.proveedor.count()) + ' proveedores, ' + (await p.plato.count()) + ' plato, ' + (await p.entrada.count()) + ' entrada, ' + (await p.usuario.count()) + ' usuarios');
+  const count = await p.producto.count({ where: { restauranteId: rid } });
+  console.log(count + ' productos, ' + (await p.proveedor.count({ where: { restauranteId: rid } })) + ' proveedores, ' + (await p.plato.count({ where: { restauranteId: rid } })) + ' plato, ' + (await p.entrada.count({ where: { restauranteId: rid } })) + ' entrada, ' + (await p.usuario.count({ where: { restauranteId: rid } })) + ' usuarios');
   await p.$disconnect();
 })();

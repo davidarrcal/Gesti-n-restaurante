@@ -22,7 +22,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const isLogin = pathname === "/login";
+  const isLogin = pathname === "/login" || pathname === "/registro";
 
   useEffect(() => {
     if (!loading && !user && !isLogin) {

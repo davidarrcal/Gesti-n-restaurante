@@ -11,6 +11,8 @@ export interface AuthUser {
   email: string;
   nombre: string;
   rol: RolUsuario;
+  restauranteId: string;
+  restaurante?: { nombre: string } | null;
 }
 
 export interface AuthResponse {

@@ -1,5 +1,6 @@
 // Schema para el Sistema de Gestión de Inventario y Escandallos
 // Base de datos: PostgreSQL (local o Supabase)
+// Multi-tenant: cada restaurante tiene sus propios datos aislados por restauranteId
 
 generator client {
   provider = "prisma-client-js"
@@ -39,6 +40,23 @@ enum RolUsuario {
   COCINERO
 }
 
+// ----------------------------- Restaurantes (Tenant) -----------------------------
+
+model Restaurante {
+  id        String   @id @default(uuid())
+  nombre    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuarios   Usuario[]
+  proveedores Proveedor[]
+  productos  Producto[]
+  entradas   Entrada[]
+  salidas    Salida[]
+  platos     Plato[]
+  movimientos Movimiento[]
+}
+
 // ----------------------------- Proveedores -----------------------------
 
 model Proveedor {
@@ -50,8 +68,13 @@ model Proveedor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   entradas  Entrada[]
   productos Producto[]
+
+  @@index([restauranteId])
 }
 
 // ----------------------------- Productos -----------------------------
@@ -69,6 +92,9 @@ model Producto {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   proveedorId String?
   proveedor   Proveedor? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
 
@@ -77,6 +103,7 @@ model Producto {
   detalleEscandallo DetalleEscandallo[]
   movimientos      Movimiento[]
 
+  @@index([restauranteId])
   @@index([categoria])
   @@index([fechaCaducidad])
 }
@@ -91,9 +118,13 @@ model Entrada {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   proveedor Proveedor? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
   detalles  DetalleEntrada[]
 
+  @@index([restauranteId])
   @@index([proveedorId])
 }
 
@@ -123,9 +154,13 @@ model Salida {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   plato   Plato?            @relation(fields: [platoId], references: [id], onDelete: SetNull)
   detalles DetalleSalida[]
 
+  @@index([restauranteId])
   @@index([platoId])
 }
 
@@ -154,9 +189,13 @@ model Plato {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   detalles DetalleEscandallo[]
   salidas  Salida[]
 
+  @@index([restauranteId])
   @@index([nombre])
 }
 
@@ -188,8 +227,12 @@ model Movimiento {
   motivo         MotivoSalida?
   createdAt      DateTime        @default(now())
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
 
+  @@index([restauranteId])
   @@index([productoId, fecha])
 }
 
@@ -199,11 +242,15 @@ model Usuario {
   id           String      @id @default(uuid())
   email        String      @unique
   passwordHash String
-  nombre       String
+  nombre        String
   rol          RolUsuario  @default(COCINERO)
   activo       Boolean     @default(true)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  restauranteId String
+  restaurante   Restaurante @relation(fields: [restauranteId], references: [id], onDelete: Cascade)
+
   @@index([email])
+  @@index([restauranteId])
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AlertasService } from './alertas.service';
 
@@ -8,14 +8,15 @@ export class AlertasController {
   constructor(private readonly service: AlertasService) {}
 
   @Get()
-  findAll(@Query('diasProximo') diasProximo?: string) {
+  findAll(@Request() req: any, @Query('diasProximo') diasProximo?: string) {
     return this.service.findAll(
+      req.user.restauranteId,
       diasProximo ? Number(diasProximo) : 7,
     );
   }
 
   @Get('metricas')
-  metricas() {
-    return this.service.metricas();
+  metricas(@Request() req: any) {
+    return this.service.metricas(req.user.restauranteId);
   }
 }

@@ -33,7 +33,7 @@ export class AsistenteService {
     message: string,
     history: ChatTurn[],
     contexto: string,
-    user: { id: string; nombre: string; rol: RolUsuario },
+    user: { id: string; nombre: string; rol: RolUsuario; restauranteId: string },
   ): Promise<{ reply: string }> {
     const apiKey = this.config.get<string>('OPENROUTER_API_KEY');
     if (!apiKey) {
